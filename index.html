@@ -161,10 +161,14 @@ function msg(icon, title, text){ $('mIcon').textContent=icon; $('mTitle').textCo
 /* ===== API ===== */
 async function api(action, payload){
   const res = await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({ liff:1, action, idToken: liff.getIDToken(), payload: payload||{} }) });
+    body: JSON.stringify({ liff:1, action, accessToken: liff.getAccessToken(), idToken: liff.getIDToken(), payload: payload||{} }) });
+  if (!res.ok) throw new Error('เซิร์ฟเวอร์ตอบ HTTP ' + res.status);
   const j = await res.json();
   if (!j.ok) {
-    if (j.error === 'TOKEN_EXPIRED' || j.error === 'TOKEN_MISSING') { liff.logout(); liff.login({ redirectUri: location.href }); throw new Error('กำลังเข้าสู่ระบบใหม่…'); }
+    if (j.error === 'TOKEN_EXPIRED' || j.error === 'TOKEN_MISSING') {
+      if (liff.isInClient()) throw new Error('สิทธิ์เข้าใช้หมดอายุ กรุณาปิดหน้านี้แล้วเปิดลิงก์ใหม่อีกครั้ง');
+      liff.logout(); liff.login({ redirectUri: location.origin + location.pathname }); throw new Error('กำลังเข้าสู่ระบบใหม่…');
+    }
     throw new Error(j.error);
   }
   return j.data;
@@ -176,10 +180,10 @@ async function api(action, payload){
     const cfg = await (await fetch(GAS_URL + '?liffconfig=1')).json();
     if (!cfg.liffId) return msg('⚙️','ยังไม่ได้ตั้งค่า LIFF','ผู้ดูแลต้องใส่ LIFF_ID ในหน้าเว็บ › ตั้งค่า › ตั้งค่าระบบ');
     await liff.init({ liffId: cfg.liffId });
-    if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+    if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.origin + location.pathname }); return; }
     $('loadMsg').textContent = 'กำลังโหลดข้อมูล…';
     await boot();
-  } catch(e) { msg('⚠️','เชื่อมต่อไม่สำเร็จ', e.message); }
+  } catch(e) { msg('⚠️','เชื่อมต่อไม่สำเร็จ', (e && (e.message || e.code)) || String(e)); }
 })();
 
 async function boot(){
