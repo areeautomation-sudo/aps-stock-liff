@@ -183,6 +183,7 @@ async function api(action, payload){
     if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.origin + location.pathname }); return; }
     $('loadMsg').textContent = 'กำลังโหลดข้อมูล…';
     await boot();
+    applyStartTab();
   } catch(e) { msg('⚠️','เชื่อมต่อไม่สำเร็จ', (e && (e.message || e.code)) || String(e)); }
 })();
 
@@ -206,6 +207,15 @@ async function boot(){
     d.projects.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
   $('fPrj').value = keepP;
   view('vApp'); setType(S.type); renderAll();
+}
+
+/* เปิดแท็บตามลิงก์ เช่น https://liff.line.me/<id>?tab=bal หรือ ?type=IN (ใช้กับปุ่ม Rich Menu) */
+function applyStartTab(){
+  if ($('vApp').classList.contains('hidden')) return;
+  const q = new URLSearchParams(location.search);
+  const t = q.get('tab'), ty = q.get('type');
+  if (ty === 'IN' || ty === 'OUT') setType(ty);
+  if (['txn','bal','hist'].includes(t)) tab(t);
 }
 
 async function refresh(){ try { await boot(); toast('อัปเดตยอดล่าสุดแล้ว'); } catch(e){ toast(e.message, true); } }
